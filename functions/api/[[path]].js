@@ -74,9 +74,9 @@ export async function onRequest(context) {
         if (publicGetRoutes.includes(fullApiRoute) && request.method === 'GET') {
             let key;
             if (fullApiRoute === 'get-data') {
-                const list = await env.DB.list({ prefix: 'post:' });
+                const list = await env.OJBK_STORE.list({ prefix: 'post:' });
                 const posts = await Promise.all(list.keys.map(async (k) => {
-                    const value = await env.DB.get(k.name);
+                    const value = await env.OJBK_STORE.get(k.name);
                     return value ? { key: k.name.split(':')[1], value: JSON.parse(value) } : null;
                 }));
                 return new Response(JSON.stringify(posts.filter(Boolean)), { headers });
@@ -87,7 +87,7 @@ export async function onRequest(context) {
             if (fullApiRoute === 'links/get') key = 'config:links';
             
             if (key) {
-                const value = await env.DB.get(key);
+                const value = await env.OJBK_STORE.get(key);
                 return new Response(value || (key.includes('settings') ? '{}' : '[]'), { headers });
             }
         }
@@ -95,7 +95,7 @@ export async function onRequest(context) {
         if (fullApiRoute.startsWith('get-article/') && pathSegments.length === 2 && request.method === 'GET') {
             const articleId = pathSegments[1];
             const key = `post:${articleId}`;
-            const value = await env.DB.get(key);
+            const value = await env.OJBK_STORE.get(key);
             if (value === null) return new Response(JSON.stringify({ error: 'Article not found' }), { status: 404, headers });
             return new Response(JSON.stringify({ key: articleId, value: JSON.parse(value) }), { headers });
         }
@@ -108,7 +108,7 @@ export async function onRequest(context) {
              const commentId = new Date().toISOString();
              const key = `comment:${commentData.articleId}:${commentId}`;
              const value = JSON.stringify({ author: commentData.author, email: commentData.email, comment: commentData.comment, timestamp: Date.now() });
-             await env.DB.put(key, value);
+             await env.OJBK_STORE.put(key, value);
              return new Response(JSON.stringify({ success: true }), { headers });
         }
 
@@ -127,32 +127,32 @@ export async function onRequest(context) {
             if (fullApiRoute === 'links/save') key = 'config:links';
             
             if (key) {
-                await env.DB.put(key, JSON.stringify(data));
+                await env.OJBK_STORE.put(key, JSON.stringify(data));
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
 
             if (fullApiRoute === 'article/submit') {
                 const postKey = data.key || Date.now().toString();
-                await env.DB.put(`post:${postKey}`, JSON.stringify(data));
+                await env.OJBK_STORE.put(`post:${postKey}`, JSON.stringify(data));
                 return new Response(JSON.stringify({ success: true, key: postKey }), { headers });
             }
 
             if (fullApiRoute === 'article/delete') {
-                await env.DB.delete(`post:${data.key}`);
+                await env.OJBK_STORE.delete(`post:${data.key}`);
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
             
             if (fullApiRoute === 'comments/delete') {
-                await env.DB.delete(data.id);
+                await env.OJBK_STORE.delete(data.id);
                 return new Response(JSON.stringify({ success: true }), { headers });
             }
             
             if (fullApiRoute === 'comments/update') {
-                 const storedCommentRaw = await env.DB.get(data.id);
+                 const storedCommentRaw = await env.OJBK_STORE.get(data.id);
                  if(storedCommentRaw) {
                      const storedComment = JSON.parse(storedCommentRaw);
                      storedComment.comment = data.content;
-                     await env.DB.put(data.id, JSON.stringify(storedComment));
+                     await env.OJBK_STORE.put(data.id, JSON.stringify(storedComment));
                      return new Response(JSON.stringify({ success: true }), { headers });
                  }
                  return new Response(JSON.stringify({ success: false, message: 'Comment not found' }), { status: 404, headers });
@@ -160,9 +160,9 @@ export async function onRequest(context) {
         }
         
         if (fullApiRoute === 'comments/get' && request.method === 'GET') {
-             const list = await env.DB.list({ prefix: 'comment:' });
+             const list = await env.OJBK_STORE.list({ prefix: 'comment:' });
              const comments = await Promise.all(list.keys.map(async (k) => {
-                 const value = await env.DB.get(k.name);
+                 const value = await env.OJBK_STORE.get(k.name);
                  if (!value) return null;
                  const data = JSON.parse(value);
                  return {
