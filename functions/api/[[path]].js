@@ -8,16 +8,43 @@ export async function onRequest(context) {
     const { request, env, params } = context;
     const url = new URL(request.url);
     const pathSegments = params.path || [];
-    const apiRoute = pathSegments[0]; // e.g., 'get-data', 'get-article'
+    const apiRoute = pathSegments[0]; // e.g., 'get-data', 'admin-login'
 
     // 设置通用的CORS和缓存头
     const headers = {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*', // 仅用于开发，生产环境建议更严格
-        'Cache-Control': 's-maxage=60, stale-while-revalidate=30' // 缓存1分钟
     };
 
     try {
+        // --- 新增路由：管理员登录 ---
+        if (apiRoute === 'admin-login' && request.method === 'POST') {
+            const { username, password } = await request.json();
+
+            // 从环境变量中获取正确的用户名和密码
+            const correctUsername = env.ADMIN_USERNAME;
+            const correctPassword = env.ADMIN_PASSWORD;
+
+            if (!correctUsername || !correctPassword) {
+                 return new Response(JSON.stringify({ success: false, message: '管理员凭据未在服务器端配置' }), {
+                    status: 500,
+                    headers: headers
+                });
+            }
+
+            if (username === correctUsername && password === correctPassword) {
+                // 登录成功
+                return new Response(JSON.stringify({ success: true }), { headers });
+            } else {
+                // 登录失败
+                return new Response(JSON.stringify({ success: false, message: '用户名或密码错误' }), {
+                    status: 401, // 401 Unauthorized
+                    headers: headers
+                });
+            }
+        }
+
+
         // --- 路由：获取所有文章数据 ---
         if (apiRoute === 'get-data' && request.method === 'GET') {
             const list = await env.OJBK_STORE.list({ prefix: 'post:' });
@@ -77,12 +104,12 @@ export async function onRequest(context) {
                 });
             }
             
-            const commentId = new Date().toISOString(); // 使用ISO字符串作为唯一ID
+            const commentId = new Date().toISOString();
             const key = `comment:${commentData.articleId}:${commentId}`;
             
             const value = JSON.stringify({
                 author: commentData.author,
-                email: commentData.email, // 注意：存储明文邮箱存在隐私风险
+                email: commentData.email,
                 comment: commentData.comment,
                 timestamp: Date.now()
             });
