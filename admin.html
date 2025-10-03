@@ -332,7 +332,7 @@
 
             async function loadWebsiteSettings() {
                 try {
-                    const response = await fetch('/api/website-settings/get'); // Public, no auth needed
+                    const response = await fetch('/api/website-settings/get');
                     if (!response.ok) throw new Error('Network response was not ok.');
                     const settings = await response.json() || {};
                     document.getElementById('site-title').value = settings.siteTitle || '';
@@ -428,15 +428,15 @@
                 const list = document.getElementById('nav-item-list');
                 document.getElementById('add-nav-item').addEventListener('click', () => list.appendChild(createNavItemElement({ id: `new_${Date.now()}`, name: '', url: '', icon: '' })));
                 document.getElementById('save-nav-items').addEventListener('click', async () => {
-                    // --- 核心修改在这里 ---
                     const items = Array.from(list.querySelectorAll('.editor-item')).map(el => {
                         const name = el.querySelector('.nav-name-input').value.trim();
                         let url = el.querySelector('.nav-url-input').value.trim();
                         const icon = el.querySelector('.nav-icon-input').value.trim();
 
-                        // 如果URL为空，并且名称不为空，则自动根据名称生成分类链接
+                        // --- 核心修改在这里：移除URL编码 ---
                         if (url === '' && name !== '') {
-                            url = `index.html?category=${encodeURIComponent(name)}`;
+                            // 直接使用中文名，不再进行 encodeURIComponent
+                            url = `index.html?category=${name}`;
                         }
 
                         return { id: el.dataset.id, name: name, url: url, icon: icon };
@@ -457,7 +457,6 @@
 
             function createNavItemElement(item) {
                 const div = document.createElement('div'); div.className = 'editor-item'; div.dataset.id = item.id;
-                // --- 核心修改在这里：添加 placeholder ---
                 div.innerHTML = `<div class="nav-col-name"><input type="text" class="nav-name-input" placeholder="菜单项名称" value="${escapeHtml(item.name)}"></div><div class="nav-col-url"><input type="text" class="nav-url-input" placeholder="留空将自动生成分类链接" value="${escapeHtml(item.url)}"></div><div class="nav-col-icon"><input type="text" class="nav-icon-input" placeholder="图标 (例如: fas fa-home)" value="${escapeHtml(item.icon)}"></div><div class="nav-col-action"><button class="delete-btn">-</button></div>`; return div;
             }
 
