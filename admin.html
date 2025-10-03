@@ -267,8 +267,7 @@
             const errorMessage = document.getElementById('error-message');
             errorMessage.style.display = 'none';
 
-            // --- 修正: API端点从 /api/login 改为 /api/admin/login ---
-            fetch('/api/admin/login', {
+            fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
@@ -281,7 +280,6 @@
             })
             .then(data => {
                 if (data.success) {
-                    // --- 修正: 不再存储明文密码，存储btoa编码后的 'username:password' ---
                     const credentials = btoa(`${username}:${password}`);
                     localStorage.setItem('auth', credentials);
                     showDashboard();
@@ -297,9 +295,7 @@
         
         // --- 后台管理界面的所有JS功能 ---
         function initializeDashboardScripts() {
-             // --- 修正: 不再使用 'Basic ' 前缀，因为fetch的Authorization头会自动添加 ---
-             // 后端逻辑也不需要这个前缀，只需要 base64 编码的凭证
-            const authToken = localStorage.getItem('auth');
+            const authHeader = 'Basic ' + localStorage.getItem('auth');
             let allArticlesData = [];
             let allCommentsData = [];
             
@@ -388,8 +384,7 @@
                     footerLinks: Array.from(document.querySelectorAll('#footer-links-container .editor-item')).map(item => ({ id: item.dataset.id, icon: item.querySelector('.footer-link-icon').value.trim(), text: item.querySelector('.footer-link-text').value.trim(), url: item.querySelector('.footer-link-url').value.trim() }))
                 };
                 try {
-                     // --- 修正: API端点 ---
-                    const response = await fetch('/api/website-settings/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify(newSettings) });
+                    const response = await fetch('/api/website-settings/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(newSettings) });
                     if (response.ok) alert('网站设置已成功保存！'); else throw new Error('保存失败');
                 } catch (error) { console.error('Failed to save website settings:', error); alert('保存设置时出错。'); }
             }
@@ -408,16 +403,13 @@
                         key: document.getElementById('post-key').value, title: document.getElementById('post-title').value.trim(), slug: document.getElementById('post-slug').value.trim(), excerpt: document.getElementById('post-excerpt').value.trim(), content: tinymce.get('post-content').getContent(), thumbnail: document.getElementById('post-thumbnail').value.trim(), category: document.getElementById('post-category').value, author: document.getElementById('post-author').value.trim(), avatar: document.getElementById('post-avatar').value.trim(), tags: document.getElementById('post-tags').value.trim().split(',').map(tag => tag.trim()).filter(Boolean), seoKeywords: document.getElementById('post-seo-keywords').value.trim(), canonicalUrl: document.getElementById('post-canonical-url').value.trim(), views: parseInt(document.getElementById('post-views').value, 10) || 0, sticky: document.getElementById('post-sticky').checked
                     };
                     if (!postData.title || !postData.content) return alert('标题和正文不能为空！');
-                     // --- 修正: API端点 ---
-                    const response = await fetch('/api/article/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify(postData) });
+                    const response = await fetch('/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(postData) });
                     if (response.ok) { alert(postData.key ? '更新成功!' : '发布成功!'); articleForm.reset(); hideFormBtn.click(); loadArticles(); } else { alert('操作失败！'); }
                 });
                 articleListBody.addEventListener('click', async (e) => {
                     const target = e.target.closest('a'); if (!target) return; e.preventDefault();
                     const key = target.getAttribute('data-key');
-                    if (target.classList.contains('delete-btn')) { if (!confirm('确定要删除这篇文章吗？')) return; 
-                    // --- 修正: API端点 ---
-                    await fetch('/api/article/delete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify({ key }) }); loadArticles(); }
+                    if (target.classList.contains('delete-btn')) { if (!confirm('确定要删除这篇文章吗？')) return; await fetch('/api/article/delete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify({ key }) }); loadArticles(); }
                     if (target.classList.contains('edit-btn')) {
                         showFormBtn.click(); await new Promise(resolve => setTimeout(resolve, 200)); 
                         const articleToEdit = allArticlesData.find(item => item.key === key);
@@ -433,7 +425,6 @@
 
             async function loadArticles() {
                 const tbody = document.getElementById('article-list-body'); tbody.innerHTML = '<tr><td colspan="4">正在加载...</td></tr>';
-                // --- 修正: API端点 ---
                 const response = await fetch('/api/get-data'); allArticlesData = await response.json(); tbody.innerHTML = '';
                 if (allArticlesData && allArticlesData.length > 0) {
                     allArticlesData.sort((a, b) => { if (a.value.sticky && !b.value.sticky) return -1; if (!a.value.sticky && b.value.sticky) return 1; return b.key - a.key; }).forEach(item => { const tr = document.createElement('tr'); const postDate = new Date(parseInt(item.key)).toLocaleDateString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit'}); tr.innerHTML = `<td>${item.value.sticky ? '<strong>[置顶]</strong> ' : ''}${escapeHtml(item.value.title)}</td><td>${escapeHtml(item.value.category)}</td><td>${postDate}</td><td><a href="#" class="edit-btn" data-key="${item.key}">编辑</a><a href="#" class="delete-btn" data-key="${item.key}">删除</a></td>`; tbody.appendChild(tr); });
@@ -454,8 +445,7 @@
                 document.getElementById('add-nav-item').addEventListener('click', () => list.appendChild(createNavItemElement({ id: `new_${Date.now()}`, name: '', url: '', icon: '' })));
                 document.getElementById('save-nav-items').addEventListener('click', async () => {
                     const items = Array.from(list.querySelectorAll('.editor-item')).map(el => ({ id: el.dataset.id, name: el.querySelector('.nav-name-input').value, url: el.querySelector('.nav-url-input').value, icon: el.querySelector('.nav-icon-input').value }));
-                     // --- 修正: API端点 ---
-                    const response = await fetch('/api/nav/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify(items) });
+                    const response = await fetch('/api/nav/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(items) });
                     if (response.ok) { alert('导航已保存！'); loadNavItems(); } else { alert('保存失败！'); }
                 });
                 list.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) e.target.closest('.editor-item').remove(); });
@@ -477,8 +467,7 @@
                 document.getElementById('add-carousel-item').addEventListener('click', () => list.appendChild(createCarouselItemElement({ id: `new_${Date.now()}`, img: '', url: '' })));
                 document.getElementById('save-carousel-items').addEventListener('click', async () => {
                     const items = Array.from(list.querySelectorAll('.editor-item')).map(el => ({ id: el.dataset.id, img: el.querySelector('.carousel-img-input').value, url: el.querySelector('.carousel-url-input').value }));
-                     // --- 修正: API端点 ---
-                    const response = await fetch('/api/carousel/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify(items) });
+                    const response = await fetch('/api/carousel/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(items) });
                     if (response.ok) { alert('海报轮播已保存！'); loadCarouselItems(); } else { alert('保存失败！'); }
                 });
                 list.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) e.target.closest('.editor-item').remove(); });
@@ -500,8 +489,7 @@
                 document.getElementById('add-links-item').addEventListener('click', () => list.appendChild(createLinksItemElement({ id: `new_${Date.now()}`, name: '', url: '', img: '' })));
                 document.getElementById('save-links-items').addEventListener('click', async () => {
                     const items = Array.from(list.querySelectorAll('.editor-item')).map(el => ({ id: el.dataset.id, name: el.querySelector('.links-name-input').value.trim(), url: el.querySelector('.links-url-input').value.trim(), img: el.querySelector('.links-img-input').value.trim() }));
-                     // --- 修正: API端点 ---
-                    const response = await fetch('/api/links/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify(items) });
+                    const response = await fetch('/api/links/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(items) });
                     if (response.ok) { alert('友情链接已保存！'); loadLinksItems(); } else { alert('保存失败！'); }
                 });
                 list.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) e.target.closest('.editor-item').remove(); });
@@ -523,15 +511,12 @@
                 cancelButton.addEventListener('click', () => modal.style.display = 'none');
                 list.addEventListener('click', async (e) => {
                     const target = e.target.closest('a'); if (!target) return; e.preventDefault(); const id = target.getAttribute('data-id');
-                    if (target.classList.contains('delete-btn')) { if (!confirm('确定要删除这条评论吗？')) return; 
-                    // --- 修正: API端点 ---
-                    await fetch('/api/comments/delete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify({ id }) }); loadComments(); }
+                    if (target.classList.contains('delete-btn')) { if (!confirm('确定要删除这条评论吗？')) return; await fetch('/api/comments/delete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify({ id }) }); loadComments(); }
                     if (target.classList.contains('edit-btn')) { const comment = allCommentsData.find(c => c.id === id); if (comment) { document.getElementById('edit-comment-id').value = comment.id; document.getElementById('edit-comment-content').value = comment.content; modal.style.display = 'flex'; } }
                 });
                 saveButton.addEventListener('click', async () => {
                     const id = document.getElementById('edit-comment-id').value, content = document.getElementById('edit-comment-content').value;
-                    // --- 修正: API端点 ---
-                    await fetch('/api/comments/update', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify({ id, content }) });
+                    await fetch('/api/comments/update', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify({ id, content }) });
                     modal.style.display = 'none'; loadComments();
                 });
                 loadComments();
@@ -540,9 +525,7 @@
             async function loadComments() {
                 const tbody = document.getElementById('comment-list-body'); tbody.innerHTML = '';
                 try {
-                    // --- 修正: API端点 ---
-                    const response = await fetch('/api/comments/get', { headers: { 'Authorization': authToken }}); 
-                    allCommentsData = await response.json() || [];
+                    const response = await fetch('/api/comments/get'); allCommentsData = await response.json() || [];
                     if (allCommentsData.length > 0) {
                         const articleTitles = {};
                         for (const comment of allCommentsData) {
