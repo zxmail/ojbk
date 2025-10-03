@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台</title>
+    <link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="./css/post-content.css">
+    <link rel="stylesheet" href="./css/fonts/fontawesome5pro-all.min.css">
+    <script src="/tinymce/tinymce.min.js" referrerpolicy="no-referrer"></script>
+
+    <style>
+        :root { 
+            --Maincolor: #409EFF !important; 
+        }
+        /* --- 新增：修复文本选择样式 --- */
+        ::selection {
+            background-color: var(--Maincolor);
+            color: #fff;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+        
+        /* --- 登录界面样式 --- */
+        #login-section {
+            display: none; /* 默认隐藏 */
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .login-container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
+        }
+        #login-title-container {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        #login-title-container h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0;
+            color: #1c1e21;
+        }
+        #login-title-container img {
+            max-height: 60px;
+            max-width: 180px;
+        }
+        .input-group { margin-bottom: 20px; }
+        .input-group input {
+            width: 100%; padding: 12px; border: 1px solid #dddfe2; border-radius: 6px;
+            font-size: 16px; box-sizing: border-box;
+        }
+        .input-group input:focus {
+            border-color: var(--Maincolor); outline: none; box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+        }
+        .login-button {
+            width: 100%; padding: 12px; background-color: var(--Maincolor); border: none;
+            border-radius: 6px; color: white; font-size: 18px; font-weight: 600;
+            cursor: pointer; transition: background-color 0.3s;
+        }
+        .login-button:hover { background-color: #337ecc; }
+        #error-message { color: #f56c6c; text-align: center; margin-top: 15px; min-height: 1em; display: none; }
+        .back-to-home {
+            display: block;
+            text-align: right;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #909399;
+            text-decoration: none;
+        }
+        .back-to-home:hover {
+            color: var(--Maincolor);
+        }
+
+        /* --- 后台管理界面样式 (来自您的原文件) --- */
+        #dashboard-section { display: none; } /* 默认隐藏 */
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
+        .admin-container { display: flex; background: #fff; border: 1px solid #e6e9f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); min-height: 85vh; width: 100%; }
+        .admin-sidebar { flex-shrink: 0; width: 200px; padding: 20px 0; border-right: 1px solid #e6e9f0; }
+        .admin-sidebar h3 { font-size: 16px; padding: 0 20px 10px; margin: 0; color: #909399; font-weight: 600; }
+        .admin-sidebar ul { list-style: none; margin: 0; padding: 0; }
+        .admin-sidebar ul li a { display: block; padding: 12px 20px; color: #303133; text-decoration: none; transition: background-color .2s, color .2s; font-size: 14px; border-left: 3px solid transparent; }
+        .admin-sidebar ul li a:hover { background-color: #f5f7fa; }
+        .admin-sidebar ul li a.active { background-color: #ecf5ff; color: var(--Maincolor); border-left-color: var(--Maincolor); font-weight: 500; }
+        .admin-content { flex-grow: 1; padding: 20px 30px; }
+        .admin-page { display: none; }
+        .admin-page.is-active { display: block; animation: fadeIn .3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e6e9f0;}
+        .page-header h1 { font-size: 24px; margin: 0; }
+        input[type="text"], input[type="number"], textarea, select { width: 100%; border: 1px solid #dcdfe6; border-radius: 4px; padding: 10px 12px; font-size: 14px; box-sizing: border-box; margin-bottom: 15px; transition: border-color .2s; background-color: #fff; }
+        select { height: 40px; padding: 0 12px; }
+        input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus { border-color: var(--Maincolor); outline: none; box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-full-width { grid-column: 1 / -1; }
+        .form-checkbox { text-align: left; display: flex; align-items: center; gap: 5px; }
+        .form-checkbox input { width: auto; margin: 0; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .data-table th, .data-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e6e9f0; }
+        .data-table th { background-color: #f5f7fa; font-weight: 500; color: #909399; }
+        .data-table a { color: var(--Maincolor); text-decoration: none; margin-left: 15px; font-weight: 500; cursor: pointer;}
+        .delete-btn { color: #F56C6C !important; }
+        .button { cursor: pointer; }
+        #add-article-container { background: #fff; padding: 20px; border: 1px solid #e6e9f0; border-radius: 4px; margin-bottom: 20px; }
+        .editor-header, .editor-item { display: flex; gap: 15px; align-items: center; padding: 8px 0; border-bottom: 1px solid #e6e9f0; }
+        .editor-header { font-weight: 500; color: #909399; font-size: 12px; text-transform: uppercase; }
+        .editor-item input { margin-bottom: 0; }
+        .editor-item .delete-btn { background: #F56C6C; color: white !important; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: normal; }
+        .nav-col-name, .footer-link-col-text { flex: 2; } 
+        .nav-col-url, .footer-link-col-url { flex: 3; } 
+        .nav-col-icon, .footer-link-col-icon { flex: 1; } 
+        .nav-col-action, .footer-link-col-action { width: 50px; text-align: right; }
+        .carousel-col-img { flex: 3; } .carousel-col-url { flex: 2; } .carousel-col-action { width: 50px; text-align: right; }
+        .links-col-name { flex: 1; } .links-col-url { flex: 2; } .links-col-img { flex: 2; } .links-col-action { width: 50px; text-align: right; }
+        .card { background: #fff; border: 1px solid #e6e9f0; border-radius: 4px; margin-bottom: 20px; }
+        .card-header { padding: 15px 20px; border-bottom: 1px solid #e6e9f0; font-weight: 600; font-size: 16px; }
+        .card-body { padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 5px; font-size: 14px; }
+        .form-group input, .form-group textarea { margin-bottom: 0; }
+        #icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+        .icon-item-group { border: 1px solid #e6e9f0; border-radius: 4px; padding: 10px; }
+        .icon-item-group-title { font-weight: 600; margin-bottom: 10px; font-size: 14px; text-align: center; word-break: break-all; }
+        .icon-variants { display: flex; justify-content: center; gap: 15px; }
+        .icon-variant { display: flex; flex-direction: column; align-items: center; cursor: pointer; padding: 5px; border-radius: 3px; transition: background-color 0.2s; }
+        .icon-variant:hover { background-color: #ecf5ff; }
+        .icon-variant i { font-size: 24px; margin-bottom: 5px; }
+        .icon-variant span { font-size: 10px; color: #909399; }
+        .copied-toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background-color: #323232; color: white; padding: 10px 20px; border-radius: 5px; z-index: 2000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .copied-toast.show { opacity: 1; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal-content { background: #fff; padding: 25px; border-radius: 8px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-content h2 { margin-top: 0; }
+        .modal-content textarea { min-height: 120px; }
+    </style>
+</head>
+<body>
+
+    <div id="login-section">
+        <div class="login-container">
+            <div id="login-title-container">
+                <h1>后台登录</h1>
+            </div>
+            <div class="input-group">
+                <input type="text" id="username" placeholder="用户名" required>
+            </div>
+            <div class="input-group">
+                <input type="password" id="password" placeholder="密码" required>
+            </div>
+            <button id="loginBtn" class="login-button">登录</button>
+            <p id="error-message"></p>
+            <a href="/" class="back-to-home">← 返回到博客首页</a>
+        </div>
+    </div>
+
+    <div id="dashboard-section">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 style="font-weight: 600;">管理后台</h1>
+                <div>
+                    <a href="/" class="button">返回博客</a>
+                    <a href="#" id="logout-btn" class="button" style="background: #F56C6C; color: #fff; border-color: #F56C6C;">退出</a>
+                </div>
+            </div>
+            <div class="admin-container">
+                <nav class="admin-sidebar">
+                    <h3>菜单</h3>
+                    <ul>
+                        <li><a href="#" class="nav-link active" data-target="settings-page">网站设置</a></li>
+                        <li><a href="#" class="nav-link" data-target="articles-page">文章管理</a></li>
+                        <li><a href="#" class="nav-link" data-target="comments-page">评论管理</a></li>
+                        <li><a href="#" class="nav-link" data-target="navigation-page">导航设置</a></li>
+                        <li><a href="#" class="nav-link" data-target="carousel-page">海报轮播</a></li>
+                        <li><a href="#" class="nav-link" data-target="links-page">友情链接</a></li>
+                        <li><a href="#" class="nav-link" data-target="icons-page">图标展示</a></li>
+                    </ul>
+                </nav>
+                <main class="admin-content">
+                    <div id="settings-page" class="admin-page is-active">
+                        <div class="page-header"><h1>网站设置</h1><button class="button primary-btn" id="save-website-settings-btn">保存设置</button></div>
+                        <div class="card"><div class="card-header">基础信息</div><div class="card-body"><div class="form-group"><label for="site-title">网站标题</label><input type="text" id="site-title" placeholder="例如：如有乐享 - 分享是一种态度"></div><div class="form-group"><label for="site-description">网站描述</label><textarea id="site-description" rows="3"></textarea></div><div class="form-group"><label for="site-keywords">网站关键词 (逗号分隔)</label><input type="text" id="site-keywords" placeholder="例如：技术分享,免费资源,影视资源"></div><div class="form-group"><label for="blog-name">博客名称 (可选, 用于登录页)</label><input type="text" id="blog-name" placeholder="例如：如有乐享"></div><div class="form-group"><label for="blog-logo">Logo图片地址 (可选)</label><input type="text" id="blog-logo" placeholder="输入完整的图片URL"></div></div></div>
+                        <div class="card"><div class="card-header">页脚链接管理</div><div class="card-body"><div class="editor-header"><div class="footer-link-col-icon">图标 Class</div><div class="footer-link-col-text">文本</div><div class="footer-link-col-url">链接 URL</div><div class="footer-link-col-action">操作</div></div><div id="footer-links-container"></div><button class="button" id="add-footer-link-btn" style="margin-top: 15px;">+ 添加链接</button></div></div>
+                        <div class="card"><div class="card-header">页脚版权信息</div><div class="card-body"><div class="form-group"><label for="footer-copyright-text">版权文本 (支持HTML)</label><textarea id="footer-copyright-text" rows="3"></textarea></div></div></div>
+                    </div>
+                    <div id="articles-page" class="admin-page"><div class="page-header"><h1>文章列表</h1><div><button class="button" id="hide-article-form-btn" style="display: none;">返回列表</button><button class="button primary-btn" id="show-add-article-form">撰写新文章</button></div></div><div id="add-article-container" style="display: none;"><h3 id="form-title" style="margin-top:0;">发布新文章</h3><form id="article-form"><input type="hidden" id="post-key" value=""><div class="form-grid"><div class="form-full-width"><input type="text" id="post-title" placeholder="文章标题" required></div><div class="form-full-width"><textarea id="post-excerpt" placeholder="文章摘要..." style="min-height: 80px;"></textarea></div><div class="form-full-width"><label for="post-content" style="display:block; margin-bottom:5px; font-weight:500;">文章正文</label><textarea id="post-content"></textarea></div><div><input type="text" id="post-slug" placeholder="链接名 (例如: ucloud-review)"></div><div><input type="text" id="post-tags" placeholder="标签 (用逗号 , 分隔)"></div><div class="form-full-width"><input type="text" id="post-seo-keywords" placeholder="SEO 关键词 (逗号分隔)"></div><div class="form-full-width"><input type="text" id="post-canonical-url" placeholder="规范 URL (Canonical)"></div><div><input type="text" id="post-thumbnail" placeholder="缩略图 URL"></div><select id="post-category"><option value="">选择分类</option></select><div><input type="text" id="post-author" placeholder="作者名称" value="我是小马甲~"></div><div><input type="number" id="post-views" placeholder="浏览量" value="0"></div><div><input type="text" id="post-avatar" placeholder="作者头像 URL" value="./files/picture/dfa45a82b261c63a5b0107a0a1a3f292.png"></div><div class="form-checkbox"><input type="checkbox" id="post-sticky"><label for="post-sticky">设为置顶</label></div></div><p><button type="submit" id="article-submit-btn" class="button primary-btn">发布文章</button></p></form></div><table class="data-table"><thead><tr><th>标题</th><th>分类</th><th>日期</th><th>操作</th></tr></thead><tbody id="article-list-body"></tbody></table></div>
+                    <div id="comments-page" class="admin-page"><div class="page-header"><h1>评论管理</h1></div><table class="data-table"><thead><tr><th>评论内容</th><th>评论者</th><th>所属文章</th><th>日期</th><th>操作</th></tr></thead><tbody id="comment-list-body"></tbody></table></div>
+                    <div id="navigation-page" class="admin-page"><div class="page-header"><h1>导航项设置</h1></div><p>提示: 在名称前添加"--"为二级菜单，"----"为三级菜单，以此类推。</p><div class="nav-editor"><div class="editor-header"><div class="nav-col-name">菜单项名称</div><div class="nav-col-url">URL</div><div class="nav-col-icon">图标</div><div class="nav-col-action">操作</div></div><div id="nav-item-list"></div></div><button class="button" id="add-nav-item" style="margin-top: 15px;">+ 添加</button><button class="button primary-btn" id="save-nav-items" style="float: right; margin-top: 15px;">保存</button></div>
+                    <div id="carousel-page" class="admin-page"><div class="page-header"><h1>海报轮播设置</h1></div><div class="carousel-editor"><div class="editor-header"><div class="carousel-col-img">图片 URL</div><div class="carousel-col-url">链接 URL</div><div class="carousel-col-action">操作</div></div><div id="carousel-item-list"></div></div><button class="button" id="add-carousel-item" style="margin-top: 15px;">+ 添加</button><button class="button primary-btn" id="save-carousel-items" style="float: right; margin-top: 15px;">保存</button></div>
+                    <div id="links-page" class="admin-page"><div class="page-header"><h1>友情链接设置</h1></div><div class="links-editor"><div class="editor-header"><div class="links-col-name">名称</div><div class="links-col-url">链接 URL</div><div class="links-col-img">图片 URL (可选)</div><div class="links-col-action">操作</div></div><div id="links-item-list"></div></div><button class="button" id="add-links-item" style="margin-top: 15px;">+ 添加</button><button class="button primary-btn" id="save-links-items" style="float: right; margin-top: 15px;">保存</button></div>
+                    <div id="icons-page" class="admin-page"><div class="page-header"><h1>图标展示</h1></div><input type="text" id="icon-search-input" placeholder="搜索图标 (例如: home)..." style="margin-bottom: 20px;"><div id="icon-grid"><p>正在加载和解析图标文件...</p></div></div>
+                </main>
+            </div>
+        </div>
+    </div>
+    
+    <div id="copied-toast" class="copied-toast">已复制!</div>
+    
+    <div id="comment-edit-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>编辑评论</h2>
+            <input type="hidden" id="edit-comment-id">
+            <textarea id="edit-comment-content"></textarea>
+            <button class="button primary-btn" id="save-comment-btn">保存</button>
+            <button class="button" id="cancel-comment-btn" style="margin-left: 10px;">取消</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 主控制器 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('auth')) {
+                showDashboard();
+            } else {
+                showLogin();
+            }
+            document.getElementById('loginBtn').addEventListener('click', handleLogin);
+            document.getElementById('password').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    handleLogin();
+                }
+            });
+        });
+
+        function showLogin() {
+            document.body.style.backgroundColor = '#f0f2f5';
+            document.getElementById('login-section').style.display = 'flex';
+            document.getElementById('dashboard-section').style.display = 'none';
+
+            // 获取网站设置以显示Logo或博客名称
+            fetch('/api/website-settings/get')
+                .then(response => response.json())
+                .then(settings => {
+                    const titleContainer = document.getElementById('login-title-container');
+                    if (settings && settings.logoUrl) {
+                        titleContainer.innerHTML = `<img src="${settings.logoUrl}" alt="Logo">`;
+                    } else if (settings && settings.blogName) {
+                        titleContainer.innerHTML = `<h1>${settings.blogName}</h1>`;
+                    } else {
+                        titleContainer.innerHTML = `<h1>后台登录</h1>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('获取网站设置失败:', error);
+                    document.getElementById('login-title-container').innerHTML = `<h1>后台登录</h1>`;
+                });
+        }
+
+        function showDashboard() {
+            document.body.style.backgroundColor = '#fff'; 
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('dashboard-section').style.display = 'block';
+            initializeDashboardScripts();
+        }
+
+        function handleLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.style.display = 'none';
+
+            fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw new Error(err.message || '用户名或密码错误。') });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    const credentials = btoa(`${username}:${password}`);
+                    localStorage.setItem('auth', credentials);
+                    showDashboard();
+                } else {
+                    throw new Error(data.message || '登录验证失败。');
+                }
+            })
+            .catch(error => {
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+            });
+        }
+        
+        // --- 后台管理界面的所有JS功能 ---
+        function initializeDashboardScripts() {
+            const authHeader = 'Basic ' + localStorage.getItem('auth');
+            let allArticlesData = [];
+            let allCommentsData = [];
+            
+            function escapeHtml(str) {
+                if (!str) return '';
+                const p = document.createElement('p');
+                p.textContent = str;
+                return p.innerHTML;
+            }
+            
+            // --- 导航和退出逻辑 ---
+            const navLinks = document.querySelectorAll('.nav-link');
+            const pages = document.querySelectorAll('.admin-page');
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                    const targetId = link.getAttribute('data-target');
+                    pages.forEach(page => page.classList.toggle('is-active', page.id === targetId));
+                });
+            });
+
+            document.getElementById('logout-btn').addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('auth');
+                window.location.reload();
+            });
+            
+            // --- 初始化所有页面 ---
+            initWebsiteSettingsPage();
+            initArticlePage();
+            initCommentsPage();
+            initNavigationPage();
+            initCarouselPage();
+            initLinksPage();
+            initIconsPage();
+            
+            // --- 以下是您原文件中所有的功能函数 ---
+
+            function initWebsiteSettingsPage() {
+                const saveBtn = document.getElementById('save-website-settings-btn');
+                const addLinkBtn = document.getElementById('add-footer-link-btn');
+                const linksContainer = document.getElementById('footer-links-container');
+                addLinkBtn.addEventListener('click', () => { linksContainer.appendChild(createFooterLinkItemElement({ id: `new_${Date.now()}`, icon: '', text: '', url: '' })); });
+                linksContainer.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) e.target.closest('.editor-item').remove(); });
+                saveBtn.addEventListener('click', saveWebsiteSettings);
+                loadWebsiteSettings();
+            }
+
+            async function loadWebsiteSettings() {
+                try {
+                    const response = await fetch('/api/website-settings/get');
+                    if (!response.ok) throw new Error('Network response was not ok.');
+                    const settings = await response.json() || {};
+                    document.getElementById('site-title').value = settings.siteTitle || '';
+                    document.getElementById('site-description').value = settings.siteDescription || '';
+                    document.getElementById('site-keywords').value = settings.siteKeywords || '';
+                    document.getElementById('blog-name').value = settings.blogName || '';
+                    document.getElementById('blog-logo').value = settings.logoUrl || '';
+                    document.getElementById('footer-copyright-text').value = settings.copyrightText || '';
+                    const container = document.getElementById('footer-links-container');
+                    container.innerHTML = '';
+                    if (settings.footerLinks && settings.footerLinks.length > 0) {
+                        settings.footerLinks.forEach(link => container.appendChild(createFooterLinkItemElement(link)));
+                    }
+                } catch (error) { console.error('Failed to load website settings:', error); alert('加载网站设置失败。'); }
+            }
+
+            function createFooterLinkItemElement(item) {
+                const div = document.createElement('div');
+                div.className = 'editor-item';
+                div.dataset.id = item.id;
+                div.innerHTML = `<div class="footer-link-col-icon"><input type="text" class="footer-link-icon" placeholder="例如: fab fa-weixin" value="${escapeHtml(item.icon)}"></div><div class="footer-link-col-text"><input type="text" class="footer-link-text" placeholder="链接文本" value="${escapeHtml(item.text)}"></div><div class="footer-link-col-url"><input type="text" class="footer-link-url" placeholder="链接地址" value="${escapeHtml(item.url)}"></div><div class="footer-link-col-action"><button class="delete-btn">-</button></div>`;
+                return div;
+            }
+
+            async function saveWebsiteSettings() {
+                const newSettings = {
+                    siteTitle: document.getElementById('site-title').value.trim(),
+                    siteDescription: document.getElementById('site-description').value.trim(),
+                    siteKeywords: document.getElementById('site-keywords').value.trim(),
+                    blogName: document.getElementById('blog-name').value.trim(),
+                    logoUrl: document.getElementById('blog-logo').value.trim(),
+                    copyrightText: document.getElementById('footer-copyright-text').value,
+                    footerLinks: Array.from(document.querySelectorAll('#footer-links-container .editor-item')).map(item => ({ id: item.dataset.id, icon: item.querySelector('.footer-link-icon').value.trim(), text: item.querySelector('.footer-link-text').value.trim(), url: item.querySelector('.footer-link-url').value.trim() }))
+                };
+                try {
+                    const response = await fetch('/api/website-settings/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(newSettings) });
+                    if (response.ok) alert('网站设置已成功保存！'); else throw new Error('保存失败');
+                } catch (error) { console.error('Failed to save website settings:', error); alert('保存设置时出错。'); }
+            }
+
+            function initArticlePage() {
+                const formContainer = document.getElementById('add-article-container'), articleForm = document.getElementById('article-form'), articleListBody = document.getElementById('article-list-body'), formTitle = document.getElementById('form-title'), submitBtn = document.getElementById('article-submit-btn'), showFormBtn = document.getElementById('show-add-article-form'), hideFormBtn = document.getElementById('hide-article-form-btn');
+                const initEditor = (content = '') => {
+                    if (tinymce.get('post-content')) tinymce.remove('#post-content');
+                    tinymce.init({ selector: '#post-content', language: 'zh_CN', language_url: '/tinymce/langs/zh_CN.js', height: 500, plugins: 'anchor autolink charmap codesample emoticons image link lists media searchreplace table visualblocks wordcount', toolbar: 'undo redo | blocks fontfamily fontsize | bold italic underline strikethrough | link image media table | align lineheight | numlist bullist indent outdent | emoticons charmap | removeformat', setup: (editor) => editor.on('init', () => editor.setContent(content)) });
+                };
+                showFormBtn.addEventListener('click', () => { formTitle.textContent = '发布新文章'; submitBtn.textContent = '发布文章'; articleForm.reset(); document.getElementById('post-key').value = ''; formContainer.style.display = 'block'; showFormBtn.style.display = 'none'; hideFormBtn.style.display = 'inline-block'; populateCategoryDropdown(); initEditor(''); window.scrollTo({ top: formContainer.offsetTop - 80, behavior: 'smooth' }); });
+                hideFormBtn.addEventListener('click', () => { formContainer.style.display = 'none'; showFormBtn.style.display = 'inline-block'; hideFormBtn.style.display = 'none'; if (tinymce.get('post-content')) tinymce.get('post-content').destroy(); });
+                articleForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const postData = {
+                        key: document.getElementById('post-key').value, title: document.getElementById('post-title').value.trim(), slug: document.getElementById('post-slug').value.trim(), excerpt: document.getElementById('post-excerpt').value.trim(), content: tinymce.get('post-content').getContent(), thumbnail: document.getElementById('post-thumbnail').value.trim(), category: document.getElementById('post-category').value, author: document.getElementById('post-author').value.trim(), avatar: document.getElementById('post-avatar').value.trim(), tags: document.getElementById('post-tags').value.trim().split(',').map(tag => tag.trim()).filter(Boolean), seoKeywords: document.getElementById('post-seo-keywords').value.trim(), canonicalUrl: document.getElementById('post-canonical-url').value.trim(), views: parseInt(document.getElementById('post-views').value, 10) || 0, sticky: document.getElementById('post-sticky').checked
+                    };
+                    if (!postData.title || !postData.content) return alert('标题和正文不能为空！');
+                    const response = await fetch('/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(postData) });
+                    if (response.ok) { alert(postData.key ? '更新成功!' : '发布成功!'); articleForm.reset(); hideFormBtn.click(); loadArticles(); } else { alert('操作失败！'); }
+                });
+                articleListBody.addEventListener('click', async (e) => {
+                    const target = e.target.closest('a'); if (!target) return; e.preventDefault();
+                    const key = target.getAttribute('data-key');
+                    if (target.classList.contains('delete-btn')) { if (!confirm('确定要删除这篇文章吗？')) return; await fetch('/api/article/delete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify({ key }) }); loadArticles(); }
+                    if (target.classList.contains('edit-btn')) {
+                        showFormBtn.click(); await new Promise(resolve => setTimeout(resolve, 200)); 
+                        const articleToEdit = allArticlesData.find(item => item.key === key);
+                        if (articleToEdit) {
+                            formTitle.textContent = '编辑文章'; submitBtn.textContent = '更新文章'; const v = articleToEdit.value;
+                            document.getElementById('post-key').value = articleToEdit.key; document.getElementById('post-title').value = v.title || ''; document.getElementById('post-slug').value = v.slug || ''; document.getElementById('post-excerpt').value = v.excerpt || ''; document.getElementById('post-thumbnail').value = v.thumbnail || ''; document.getElementById('post-category').value = v.category || ''; document.getElementById('post-author').value = v.author || ''; document.getElementById('post-avatar').value = v.avatar || ''; document.getElementById('post-tags').value = (v.tags || []).join(', '); document.getElementById('post-seo-keywords').value = v.seoKeywords || ''; document.getElementById('post-canonical-url').value = v.canonicalUrl || ''; document.getElementById('post-views').value = v.views || 0; document.getElementById('post-sticky').checked = v.sticky || false;
+                            if (tinymce.get('post-content')) tinymce.get('post-content').setContent(v.content || '');
+                        }
+                    }
+                });
+                loadArticles();
+            }
+
+            async function loadArticles() {
+                const tbody = document.getElementById('article-list-body'); tbody.innerHTML = '<tr><td colspan="4">正在加载...</td></tr>';
+                const response = await fetch('/api/get-data'); allArticlesData = await response.json(); tbody.innerHTML = '';
+                if (allArticlesData && allArticlesData.length > 0) {
+                    allArticlesData.sort((a, b) => { if (a.value.sticky && !b.value.sticky) return -1; if (!a.value.sticky && b.value.sticky) return 1; return b.key - a.key; }).forEach(item => { const tr = document.createElement('tr'); const postDate = new Date(parseInt(item.key)).toLocaleDateString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit'}); tr.innerHTML = `<td>${item.value.sticky ? '<strong>[置顶]</strong> ' : ''}${escapeHtml(item.value.title)}</td><td>${escapeHtml(item.value.category)}</td><td>${postDate}</td><td><a href="#" class="edit-btn" data-key="${item.key}">编辑</a><a href="#" class="delete-btn" data-key="${item.key}">删除</a></td>`; tbody.appendChild(tr); });
+                } else { tbody.innerHTML = '<tr><td colspan="4">暂无文章。</td></tr>'; }
+            }
+
+            async function populateCategoryDropdown() {
+                const select = document.getElementById('post-category'); const currentValue = select.value; select.innerHTML = '<option value="">选择分类</option>';
+                try {
+                    const response = await fetch('/api/nav/get'); const items = await response.json();
+                    if (items) items.forEach(item => { const option = document.createElement('option'); option.value = item.name; const match = item.name.match(/^-+/); const indent = match ? match[0].length / 2 : 0; option.innerHTML = '&nbsp;'.repeat(indent * 4) + escapeHtml(item.name.replace(/^-+/, '')); select.appendChild(option); });
+                    select.value = currentValue;
+                } catch(e) { console.error("加载分类失败", e); }
+            }
+
+            function initNavigationPage() {
+                const list = document.getElementById('nav-item-list');
+                document.getElementById('add-nav-item').addEventListener('click', () => list.appendChild(createNavItemElement({ id: `new_${Date.now()}`, name: '', url: '', icon: '' })));
+                document.getElementById('save-nav-items').addEventListener('click', async () => {
+                    const items = Array.from(list.querySelectorAll('.editor-item')).map(el => ({ id: el.dataset.id, name: el.querySelector('.nav-name-input').value, url: el.querySelector('.nav-url-input').value, icon: el.querySelector('.nav-icon-input').value }));
+                    const response = await fetch('/api/nav/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(items) });
+                    if (response.ok) { alert('导航已保存！'); loadNavItems(); } else { alert('保存失败！'); }
+                });
+                list.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) e.target.closest('.editor-item').remove(); });
+                loadNavItems();
+            }
+
+            async function loadNavItems() {
+                const list = document.getElementById('nav-item-list'); list.innerHTML = '<p>正在加载...</p>';
+                const response = await fetch('/api/nav/get'); const items = await response.json(); list.innerHTML = '';
+                if (items && items.length > 0) items.forEach(item => list.appendChild(createNavItemElement(item))); else list.innerHTML = '<p style="padding: 10px;">暂无导航项。</p>';
+            }
+
+            function createNavItemElement(item) {
+                const div = document.createElement('div'); div.className = 'editor-item'; div.dataset.id = item.id; div.innerHTML = `<div class="nav-col-name"><input type="text" class="nav-name-input" placeholder="菜单项名称" value="${escapeHtml(item.name)}"></div><div class="nav-col-url"><input type="text" class="nav-url-input" placeholder="URL" value="${escapeHtml(item.url)}"></div><div class="nav-col-icon"><input type="text" class="nav-icon-input" placeholder="图标 (例如: fas fa-home)" value="${escapeHtml(item.icon)}"></div><div class="nav-col-action"><button class="delete-btn">-</button></div>`; return div;
+            }
+
+            function initCarouselPage() {
+                const list = document.getElementById('carousel-item-list');
+                document.getElementById('add-carousel-item').addEventListener('click', () => list.appendChild(createCarouselItemElement({ id: `new_${Date.now()}`, img: '', url: '' })));
+                document.getElementById('save-carousel-items').addEventListener('click', async () => {
+                    const items = Array.from(list.querySelectorAll('.editor-item')).map(el => ({ id: el.dataset.id, img: el.querySelector('.carousel-img-input').value, url: el.querySelector('.carousel-url-input').value }));
+                    const response = await fetch('/api/carousel/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(items) });
+                    if (response.ok) { alert('海报轮播已保存！'); loadCarouselItems(); } else { alert('保存失败！'); }
+                });
+                list.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) e.target.closest('.editor-item').remove(); });
+                loadCarouselItems();
+            }
+
+            async function loadCarouselItems() {
+                const list = document.getElementById('carousel-item-list'); list.innerHTML = '<p>正在加载...</p>';
+                const response = await fetch('/api/carousel/get'); const items = await response.json(); list.innerHTML = '';
+                if (items && items.length > 0) items.forEach(item => list.appendChild(createCarouselItemElement(item))); else list.innerHTML = '<p style="padding: 10px;">暂无海报项。</p>';
+            }
+
+            function createCarouselItemElement(item) {
+                const div = document.createElement('div'); div.className = 'editor-item'; div.dataset.id = item.id; div.innerHTML = `<div class="carousel-col-img"><input type="text" class="carousel-img-input" placeholder="图片 URL" value="${escapeHtml(item.img)}"></div><div class="carousel-col-url"><input type="text" class="carousel-url-input" placeholder="链接 URL" value="${escapeHtml(item.url)}"></div><div class="carousel-col-action"><button class="delete-btn">-</button></div>`; return div;
+            }
+
+            function initLinksPage() {
+                const list = document.getElementById('links-item-list');
+                document.getElementById('add-links-item').addEventListener('click', () => list.appendChild(createLinksItemElement({ id: `new_${Date.now()}`, name: '', url: '', img: '' })));
+                document.getElementById('save-links-items').addEventListener('click', async () => {
+                    const items = Array.from(list.querySelectorAll('.editor-item')).map(el => ({ id: el.dataset.id, name: el.querySelector('.links-name-input').value.trim(), url: el.querySelector('.links-url-input').value.trim(), img: el.querySelector('.links-img-input').value.trim() }));
+                    const response = await fetch('/api/links/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify(items) });
+                    if (response.ok) { alert('友情链接已保存！'); loadLinksItems(); } else { alert('保存失败！'); }
+                });
+                list.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) e.target.closest('.editor-item').remove(); });
+                loadLinksItems();
+            }
+
+            async function loadLinksItems() {
+                const list = document.getElementById('links-item-list'); list.innerHTML = '<p>正在加载...</p>';
+                const response = await fetch('/api/links/get'); const items = await response.json(); list.innerHTML = '';
+                if (items && items.length > 0) items.forEach(item => list.appendChild(createLinksItemElement(item))); else list.innerHTML = '<p style="padding: 10px;">暂无友情链接。</p>';
+            }
+
+            function createLinksItemElement(item) {
+                const div = document.createElement('div'); div.className = 'editor-item'; div.dataset.id = item.id; div.innerHTML = `<div class="links-col-name"><input type="text" class="links-name-input" placeholder="网站名称" value="${escapeHtml(item.name)}"></div><div class="links-col-url"><input type="text" class="links-url-input" placeholder="链接 URL" value="${escapeHtml(item.url)}"></div><div class="links-col-img"><input type="text" class="links-img-input" placeholder="图片 URL (可选)" value="${escapeHtml(item.img)}"></div><div class="links-col-action"><button class="delete-btn">-</button></div>`; return div;
+            }
+
+            function initCommentsPage() {
+                const list = document.getElementById('comment-list-body'), modal = document.getElementById('comment-edit-modal'), cancelButton = document.getElementById('cancel-comment-btn'), saveButton = document.getElementById('save-comment-btn');
+                cancelButton.addEventListener('click', () => modal.style.display = 'none');
+                list.addEventListener('click', async (e) => {
+                    const target = e.target.closest('a'); if (!target) return; e.preventDefault(); const id = target.getAttribute('data-id');
+                    if (target.classList.contains('delete-btn')) { if (!confirm('确定要删除这条评论吗？')) return; await fetch('/api/comments/delete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify({ id }) }); loadComments(); }
+                    if (target.classList.contains('edit-btn')) { const comment = allCommentsData.find(c => c.id === id); if (comment) { document.getElementById('edit-comment-id').value = comment.id; document.getElementById('edit-comment-content').value = comment.content; modal.style.display = 'flex'; } }
+                });
+                saveButton.addEventListener('click', async () => {
+                    const id = document.getElementById('edit-comment-id').value, content = document.getElementById('edit-comment-content').value;
+                    await fetch('/api/comments/update', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authHeader }, body: JSON.stringify({ id, content }) });
+                    modal.style.display = 'none'; loadComments();
+                });
+                loadComments();
+            }
+
+            async function loadComments() {
+                const tbody = document.getElementById('comment-list-body'); tbody.innerHTML = '';
+                try {
+                    const response = await fetch('/api/comments/get'); allCommentsData = await response.json() || [];
+                    if (allCommentsData.length > 0) {
+                        const articleTitles = {};
+                        for (const comment of allCommentsData) {
+                            if (!articleTitles[comment.articleId]) {
+                                try { const res = await fetch(`/api/get-article/${comment.articleId}`); const data = await res.json(); articleTitles[comment.articleId] = data.value.title || '未知文章'; } catch { articleTitles[comment.articleId] = '文章加载失败'; }
+                            }
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `<td>${escapeHtml(comment.content)}</td><td>${escapeHtml(comment.author)}</td><td><a href="/article.html?id=${comment.articleId}" target="_blank">${escapeHtml(articleTitles[comment.articleId])}</a></td><td>${new Date(comment.date).toLocaleString()}</td><td><a href="#" class="edit-btn" data-id="${comment.id}">编辑</a><a href="#" class="delete-btn" data-id="${comment.id}">删除</a></td>`;
+                            tbody.appendChild(tr);
+                        }
+                    } else { tbody.innerHTML = '<tr><td colspan="5">暂无评论。</td></tr>'; }
+                } catch(e) { console.error("加载评论失败", e); tbody.innerHTML = '<tr><td colspan="5">加载评论失败。</td></tr>'; }
+            }
+            
+            function initIconsPage() {
+                const iconGrid = document.getElementById('icon-grid'), searchInput = document.getElementById('icon-search-input'); let allIconItems = [];
+                async function loadAndParseIcons() {
+                    try {
+                        const response = await fetch('./css/fonts/fontawesome5pro-all.min.css');
+                        if (!response.ok) { iconGrid.innerHTML = '<p>错误: 无法加载 `fontawesome5pro-all.min.css` 文件。</p>'; return; }
+                        const cssText = await response.text(), iconRegex = /\.fa-([a-zA-Z0-9-]+):before{content:"\\[^"]+"}/g; let match; const iconNames = new Set();
+                        while ((match = iconRegex.exec(cssText)) !== null) iconNames.add(match[1]);
+                        if (iconNames.size === 0) { iconGrid.innerHTML = '<p>未能在CSS文件中找到任何图标。</p>'; return; }
+                        iconGrid.innerHTML = ''; const sortedIconNames = Array.from(iconNames).sort(), prefixes = ['fas', 'far', 'fal', 'fab'];
+                        sortedIconNames.forEach(name => {
+                            const group = document.createElement('div'); group.className = 'icon-item-group'; group.dataset.iconName = name; let variantsHTML = '';
+                            prefixes.forEach(prefix => variantsHTML += `<div class="icon-variant" data-class-name="${prefix} fa-${name}"><i class="${prefix} fa-${name}"></i><span>${prefix}</span></div>`);
+                            group.innerHTML = `<div class="icon-item-group-title">${name}</div><div class="icon-variants">${variantsHTML}</div>`; iconGrid.appendChild(group);
+                        });
+                        allIconItems = Array.from(iconGrid.querySelectorAll('.icon-item-group'));
+                    } catch (error) { console.error('Error loading or parsing CSS:', error); iconGrid.innerHTML = `<p>加载或解析图标时出错: ${error.message}</p>`; }
+                }
+                searchInput.addEventListener('input', (e) => { const term = e.target.value.toLowerCase(); allIconItems.forEach(item => { item.style.display = item.dataset.iconName.toLowerCase().includes(term) ? 'block' : 'none'; }); });
+                iconGrid.addEventListener('click', (e) => {
+                    const item = e.target.closest('.icon-variant'); if (!item) return;
+                    navigator.clipboard.writeText(item.dataset.className).then(() => { const toast = document.getElementById('copied-toast'); toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1500); }).catch(err => console.error('Failed to copy text: ', err));
+                });
+                loadAndParseIcons();
+            }
+        }
+    </script>
+</body>
+</html>
