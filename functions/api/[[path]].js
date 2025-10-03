@@ -8,7 +8,9 @@ export async function onRequest(context) {
     const { request, env, params } = context;
     const url = new URL(request.url);
     const pathSegments = params.path || [];
-    const apiRoute = pathSegments[0]; // e.g., 'get-data', 'admin-login'
+    
+    // 将路径片段连接成一个完整的API路径，例如 'admin/login'
+    const fullApiRoute = pathSegments.join('/'); 
 
     // 设置通用的CORS和缓存头
     const headers = {
@@ -17,8 +19,9 @@ export async function onRequest(context) {
     };
 
     try {
-        // --- 新增路由：管理员登录 ---
-        if (apiRoute === 'admin-login' && request.method === 'POST') {
+        // --- 修正后的路由：管理员登录 ---
+        // 现在会正确匹配 'admin/login'
+        if (fullApiRoute === 'admin/login' && request.method === 'POST') {
             const { username, password } = await request.json();
 
             // 从环境变量中获取正确的用户名和密码
@@ -34,7 +37,7 @@ export async function onRequest(context) {
 
             if (username === correctUsername && password === correctPassword) {
                 // 登录成功
-                return new Response(JSON.stringify({ success: true }), { headers });
+                return new Response(JSON.stringify({ success: true, message: '登录成功' }), { headers });
             } else {
                 // 登录失败
                 return new Response(JSON.stringify({ success: false, message: '用户名或密码错误' }), {
@@ -46,11 +49,11 @@ export async function onRequest(context) {
 
 
         // --- 路由：获取所有文章数据 ---
-        if (apiRoute === 'get-data' && request.method === 'GET') {
-            const list = await env.OJBK_STORE.list({ prefix: 'post:' });
+        if (fullApiRoute === 'get-data' && request.method === 'GET') {
+            const list = await env.DB.list({ prefix: 'post:' });
             const posts = await Promise.all(
                 list.keys.map(async (key) => {
-                    const value = await env.OJBK_STORE.get(key.name);
+                    const value = await env.DB.get(key.name);
                     return value ? { key: key.name.split(':')[1], value: JSON.parse(value) } : null;
                 })
             );
@@ -58,10 +61,10 @@ export async function onRequest(context) {
         }
 
         // --- 路由：获取单篇文章 ---
-        if (apiRoute === 'get-article' && pathSegments.length > 1 && request.method === 'GET') {
+        if (fullApiRoute.startsWith('get-article/') && pathSegments.length === 2 && request.method === 'GET') {
             const articleId = pathSegments[1];
             const key = `post:${articleId}`;
-            const value = await env.OJBK_STORE.get(key);
+            const value = await env.DB.get(key);
             if (value === null) {
                 return new Response(JSON.stringify({ error: 'Article not found' }), { status: 404, headers });
             }
@@ -69,32 +72,32 @@ export async function onRequest(context) {
         }
 
         // --- 路由：获取导航菜单 ---
-        if (apiRoute === 'nav' && pathSegments[1] === 'get' && request.method === 'GET') {
-            const value = await env.OJBK_STORE.get('config:nav');
+        if (fullApiRoute === 'nav/get' && request.method === 'GET') {
+            const value = await env.DB.get('config:nav');
             return new Response(value || '[]', { headers });
         }
         
         // --- 路由：获取网站设置 ---
-        if (apiRoute === 'website-settings' && pathSegments[1] === 'get' && request.method === 'GET') {
-            const value = await env.OJBK_STORE.get('config:website-settings');
+        if (fullApiRoute === 'website-settings/get' && request.method === 'GET') {
+            const value = await env.DB.get('config:website-settings');
             return new Response(value || '{}', { headers });
         }
 
         // --- 路由：获取轮播图 ---
-        if (apiRoute === 'carousel' && pathSegments[1] === 'get' && request.method === 'GET') {
-            const value = await env.OJBK_STORE.get('config:carousel');
+        if (fullApiRoute === 'carousel/get' && request.method === 'GET') {
+            const value = await env.DB.get('config:carousel');
             return new Response(value || '[]', { headers });
         }
 
         // --- 路由：获取友情链接 ---
-        if (apiRoute === 'links' && pathSegments[1] === 'get' && request.method === 'GET') {
-            const value = await env.OJBK_STORE.get('config:links');
+        if (fullApiRoute === 'links/get' && request.method === 'GET') {
+            const value = await env.DB.get('config:links');
             return new Response(value || '[]', { headers });
         }
 
 
         // --- 路由：提交评论 ---
-        if (apiRoute === 'submit-comment' && request.method === 'POST') {
+        if (fullApiRoute === 'submit-comment' && request.method === 'POST') {
             const commentData = await request.json();
 
             if (!commentData.articleId || !commentData.author || !commentData.comment || !commentData.email) {
@@ -114,7 +117,7 @@ export async function onRequest(context) {
                 timestamp: Date.now()
             });
 
-            await env.OJBK_STORE.put(key, value);
+            await env.DB.put(key, value);
 
             return new Response(JSON.stringify({ success: true }), {
                 headers: headers
@@ -122,13 +125,13 @@ export async function onRequest(context) {
         }
 
         // 如果没有匹配的路由，返回JSON格式的错误
-        return new Response(JSON.stringify({ error: 'API route not found.' }), { 
+        return new Response(JSON.stringify({ error: 'API route not found.', requestedRoute: fullApiRoute }), { 
             status: 404,
             headers: headers
         });
 
     } catch (error) {
-        console.error(`API Error on path /api/${pathSegments.join('/')}:`, error);
+        console.error(`API Error on path /api/${fullApiRoute}:`, error);
         // 内部服务器错误也返回JSON格式
         return new Response(JSON.stringify({ error: 'Internal Server Error' }), { 
             status: 500,
