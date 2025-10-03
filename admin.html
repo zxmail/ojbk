@@ -13,7 +13,6 @@
         :root { 
             --Maincolor: #409EFF !important; 
         }
-        /* --- 新增：修复文本选择样式 --- */
         ::selection {
             background-color: var(--Maincolor);
             color: #fff;
@@ -24,9 +23,8 @@
             background-color: #f0f2f5;
         }
         
-        /* --- 登录界面样式 --- */
         #login-section {
-            display: none; /* 默认隐藏 */
+            display: none;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -81,8 +79,7 @@
             color: var(--Maincolor);
         }
 
-        /* --- 后台管理界面样式 (来自您的原文件) --- */
-        #dashboard-section { display: none; } /* 默认隐藏 */
+        #dashboard-section { display: none; }
         .container { max-width: 1200px; margin: 20px auto; padding: 0 15px; }
         .admin-container { display: flex; background: #fff; border: 1px solid #e6e9f0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); min-height: 85vh; width: 100%; }
         .admin-sidebar { flex-shrink: 0; width: 200px; padding: 20px 0; border-right: 1px solid #e6e9f0; }
@@ -215,7 +212,6 @@
     </div>
 
     <script>
-        // --- 主控制器 ---
         document.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('auth')) {
                 showDashboard();
@@ -224,9 +220,7 @@
             }
             document.getElementById('loginBtn').addEventListener('click', handleLogin);
             document.getElementById('password').addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    handleLogin();
-                }
+                if (e.key === 'Enter') handleLogin();
             });
         });
 
@@ -234,21 +228,14 @@
             document.body.style.backgroundColor = '#f0f2f5';
             document.getElementById('login-section').style.display = 'flex';
             document.getElementById('dashboard-section').style.display = 'none';
-
-            // 获取网站设置以显示Logo或博客名称
             fetch('/api/website-settings/get')
                 .then(response => response.json())
                 .then(settings => {
                     const titleContainer = document.getElementById('login-title-container');
-                    if (settings && settings.logoUrl) {
-                        titleContainer.innerHTML = `<img src="${settings.logoUrl}" alt="Logo">`;
-                    } else if (settings && settings.blogName) {
-                        titleContainer.innerHTML = `<h1>${settings.blogName}</h1>`;
-                    } else {
-                        titleContainer.innerHTML = `<h1>后台登录</h1>`;
-                    }
-                })
-                .catch(error => {
+                    if (settings && settings.logoUrl) titleContainer.innerHTML = `<img src="${settings.logoUrl}" alt="Logo">`;
+                    else if (settings && settings.blogName) titleContainer.innerHTML = `<h1>${settings.blogName}</h1>`;
+                    else titleContainer.innerHTML = `<h1>后台登录</h1>`;
+                }).catch(error => {
                     console.error('获取网站设置失败:', error);
                     document.getElementById('login-title-container').innerHTML = `<h1>后台登录</h1>`;
                 });
@@ -266,40 +253,37 @@
             const password = document.getElementById('password').value;
             const errorMessage = document.getElementById('error-message');
             errorMessage.style.display = 'none';
-
-            // --- 修正: API端点从 /api/login 改为 /api/admin/login ---
             fetch('/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw new Error(err.message || '用户名或密码错误。') });
-                }
+            }).then(response => {
+                if (!response.ok) return response.json().then(err => { throw new Error(err.message || '用户名或密码错误。') });
                 return response.json();
-            })
-            .then(data => {
+            }).then(data => {
                 if (data.success) {
-                    // --- 修正: 不再存储明文密码，存储btoa编码后的 'username:password' ---
-                    const credentials = btoa(`${username}:${password}`);
-                    localStorage.setItem('auth', credentials);
+                    localStorage.setItem('auth', btoa(`${username}:${password}`));
                     showDashboard();
                 } else {
                     throw new Error(data.message || '登录验证失败。');
                 }
-            })
-            .catch(error => {
+            }).catch(error => {
                 errorMessage.textContent = error.message;
                 errorMessage.style.display = 'block';
             });
         }
         
-        // --- 后台管理界面的所有JS功能 ---
         function initializeDashboardScripts() {
-             // --- 修正: 不再使用 'Basic ' 前缀，因为fetch的Authorization头会自动添加 ---
-             // 后端逻辑也不需要这个前缀，只需要 base64 编码的凭证
             const authToken = localStorage.getItem('auth');
+            if (!authToken) {
+                window.location.reload();
+                return;
+            }
+            const authHeaders = {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${authToken}`
+            };
+            
             let allArticlesData = [];
             let allCommentsData = [];
             
@@ -310,7 +294,6 @@
                 return p.innerHTML;
             }
             
-            // --- 导航和退出逻辑 ---
             const navLinks = document.querySelectorAll('.nav-link');
             const pages = document.querySelectorAll('.admin-page');
             navLinks.forEach(link => {
@@ -329,7 +312,6 @@
                 window.location.reload();
             });
             
-            // --- 初始化所有页面 ---
             initWebsiteSettingsPage();
             initArticlePage();
             initCommentsPage();
@@ -338,8 +320,6 @@
             initLinksPage();
             initIconsPage();
             
-            // --- 以下是您原文件中所有的功能函数 ---
-
             function initWebsiteSettingsPage() {
                 const saveBtn = document.getElementById('save-website-settings-btn');
                 const addLinkBtn = document.getElementById('add-footer-link-btn');
@@ -352,7 +332,7 @@
 
             async function loadWebsiteSettings() {
                 try {
-                    const response = await fetch('/api/website-settings/get');
+                    const response = await fetch('/api/website-settings/get'); // Public, no auth needed
                     if (!response.ok) throw new Error('Network response was not ok.');
                     const settings = await response.json() || {};
                     document.getElementById('site-title').value = settings.siteTitle || '';
@@ -388,8 +368,7 @@
                     footerLinks: Array.from(document.querySelectorAll('#footer-links-container .editor-item')).map(item => ({ id: item.dataset.id, icon: item.querySelector('.footer-link-icon').value.trim(), text: item.querySelector('.footer-link-text').value.trim(), url: item.querySelector('.footer-link-url').value.trim() }))
                 };
                 try {
-                     // --- 修正: API端点 ---
-                    const response = await fetch('/api/website-settings/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify(newSettings) });
+                    const response = await fetch('/api/website-settings/save', { method: 'POST', headers: authHeaders, body: JSON.stringify(newSettings) });
                     if (response.ok) alert('网站设置已成功保存！'); else throw new Error('保存失败');
                 } catch (error) { console.error('Failed to save website settings:', error); alert('保存设置时出错。'); }
             }
@@ -408,16 +387,13 @@
                         key: document.getElementById('post-key').value, title: document.getElementById('post-title').value.trim(), slug: document.getElementById('post-slug').value.trim(), excerpt: document.getElementById('post-excerpt').value.trim(), content: tinymce.get('post-content').getContent(), thumbnail: document.getElementById('post-thumbnail').value.trim(), category: document.getElementById('post-category').value, author: document.getElementById('post-author').value.trim(), avatar: document.getElementById('post-avatar').value.trim(), tags: document.getElementById('post-tags').value.trim().split(',').map(tag => tag.trim()).filter(Boolean), seoKeywords: document.getElementById('post-seo-keywords').value.trim(), canonicalUrl: document.getElementById('post-canonical-url').value.trim(), views: parseInt(document.getElementById('post-views').value, 10) || 0, sticky: document.getElementById('post-sticky').checked
                     };
                     if (!postData.title || !postData.content) return alert('标题和正文不能为空！');
-                     // --- 修正: API端点 ---
-                    const response = await fetch('/api/article/submit', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify(postData) });
+                    const response = await fetch('/api/article/submit', { method: 'POST', headers: authHeaders, body: JSON.stringify(postData) });
                     if (response.ok) { alert(postData.key ? '更新成功!' : '发布成功!'); articleForm.reset(); hideFormBtn.click(); loadArticles(); } else { alert('操作失败！'); }
                 });
                 articleListBody.addEventListener('click', async (e) => {
                     const target = e.target.closest('a'); if (!target) return; e.preventDefault();
                     const key = target.getAttribute('data-key');
-                    if (target.classList.contains('delete-btn')) { if (!confirm('确定要删除这篇文章吗？')) return; 
-                    // --- 修正: API端点 ---
-                    await fetch('/api/article/delete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify({ key }) }); loadArticles(); }
+                    if (target.classList.contains('delete-btn')) { if (!confirm('确定要删除这篇文章吗？')) return; await fetch('/api/article/delete', { method: 'POST', headers: authHeaders, body: JSON.stringify({ key }) }); loadArticles(); }
                     if (target.classList.contains('edit-btn')) {
                         showFormBtn.click(); await new Promise(resolve => setTimeout(resolve, 200)); 
                         const articleToEdit = allArticlesData.find(item => item.key === key);
@@ -433,7 +409,6 @@
 
             async function loadArticles() {
                 const tbody = document.getElementById('article-list-body'); tbody.innerHTML = '<tr><td colspan="4">正在加载...</td></tr>';
-                // --- 修正: API端点 ---
                 const response = await fetch('/api/get-data'); allArticlesData = await response.json(); tbody.innerHTML = '';
                 if (allArticlesData && allArticlesData.length > 0) {
                     allArticlesData.sort((a, b) => { if (a.value.sticky && !b.value.sticky) return -1; if (!a.value.sticky && b.value.sticky) return 1; return b.key - a.key; }).forEach(item => { const tr = document.createElement('tr'); const postDate = new Date(parseInt(item.key)).toLocaleDateString('zh-CN', {year:'numeric',month:'2-digit',day:'2-digit'}); tr.innerHTML = `<td>${item.value.sticky ? '<strong>[置顶]</strong> ' : ''}${escapeHtml(item.value.title)}</td><td>${escapeHtml(item.value.category)}</td><td>${postDate}</td><td><a href="#" class="edit-btn" data-key="${item.key}">编辑</a><a href="#" class="delete-btn" data-key="${item.key}">删除</a></td>`; tbody.appendChild(tr); });
@@ -453,9 +428,21 @@
                 const list = document.getElementById('nav-item-list');
                 document.getElementById('add-nav-item').addEventListener('click', () => list.appendChild(createNavItemElement({ id: `new_${Date.now()}`, name: '', url: '', icon: '' })));
                 document.getElementById('save-nav-items').addEventListener('click', async () => {
-                    const items = Array.from(list.querySelectorAll('.editor-item')).map(el => ({ id: el.dataset.id, name: el.querySelector('.nav-name-input').value, url: el.querySelector('.nav-url-input').value, icon: el.querySelector('.nav-icon-input').value }));
-                     // --- 修正: API端点 ---
-                    const response = await fetch('/api/nav/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify(items) });
+                    // --- 核心修改在这里 ---
+                    const items = Array.from(list.querySelectorAll('.editor-item')).map(el => {
+                        const name = el.querySelector('.nav-name-input').value.trim();
+                        let url = el.querySelector('.nav-url-input').value.trim();
+                        const icon = el.querySelector('.nav-icon-input').value.trim();
+
+                        // 如果URL为空，并且名称不为空，则自动根据名称生成分类链接
+                        if (url === '' && name !== '') {
+                            url = `index.html?category=${encodeURIComponent(name)}`;
+                        }
+
+                        return { id: el.dataset.id, name: name, url: url, icon: icon };
+                    });
+                    
+                    const response = await fetch('/api/nav/save', { method: 'POST', headers: authHeaders, body: JSON.stringify(items) });
                     if (response.ok) { alert('导航已保存！'); loadNavItems(); } else { alert('保存失败！'); }
                 });
                 list.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) e.target.closest('.editor-item').remove(); });
@@ -469,7 +456,9 @@
             }
 
             function createNavItemElement(item) {
-                const div = document.createElement('div'); div.className = 'editor-item'; div.dataset.id = item.id; div.innerHTML = `<div class="nav-col-name"><input type="text" class="nav-name-input" placeholder="菜单项名称" value="${escapeHtml(item.name)}"></div><div class="nav-col-url"><input type="text" class="nav-url-input" placeholder="URL" value="${escapeHtml(item.url)}"></div><div class="nav-col-icon"><input type="text" class="nav-icon-input" placeholder="图标 (例如: fas fa-home)" value="${escapeHtml(item.icon)}"></div><div class="nav-col-action"><button class="delete-btn">-</button></div>`; return div;
+                const div = document.createElement('div'); div.className = 'editor-item'; div.dataset.id = item.id;
+                // --- 核心修改在这里：添加 placeholder ---
+                div.innerHTML = `<div class="nav-col-name"><input type="text" class="nav-name-input" placeholder="菜单项名称" value="${escapeHtml(item.name)}"></div><div class="nav-col-url"><input type="text" class="nav-url-input" placeholder="留空将自动生成分类链接" value="${escapeHtml(item.url)}"></div><div class="nav-col-icon"><input type="text" class="nav-icon-input" placeholder="图标 (例如: fas fa-home)" value="${escapeHtml(item.icon)}"></div><div class="nav-col-action"><button class="delete-btn">-</button></div>`; return div;
             }
 
             function initCarouselPage() {
@@ -477,8 +466,7 @@
                 document.getElementById('add-carousel-item').addEventListener('click', () => list.appendChild(createCarouselItemElement({ id: `new_${Date.now()}`, img: '', url: '' })));
                 document.getElementById('save-carousel-items').addEventListener('click', async () => {
                     const items = Array.from(list.querySelectorAll('.editor-item')).map(el => ({ id: el.dataset.id, img: el.querySelector('.carousel-img-input').value, url: el.querySelector('.carousel-url-input').value }));
-                     // --- 修正: API端点 ---
-                    const response = await fetch('/api/carousel/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify(items) });
+                    const response = await fetch('/api/carousel/save', { method: 'POST', headers: authHeaders, body: JSON.stringify(items) });
                     if (response.ok) { alert('海报轮播已保存！'); loadCarouselItems(); } else { alert('保存失败！'); }
                 });
                 list.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) e.target.closest('.editor-item').remove(); });
@@ -500,8 +488,7 @@
                 document.getElementById('add-links-item').addEventListener('click', () => list.appendChild(createLinksItemElement({ id: `new_${Date.now()}`, name: '', url: '', img: '' })));
                 document.getElementById('save-links-items').addEventListener('click', async () => {
                     const items = Array.from(list.querySelectorAll('.editor-item')).map(el => ({ id: el.dataset.id, name: el.querySelector('.links-name-input').value.trim(), url: el.querySelector('.links-url-input').value.trim(), img: el.querySelector('.links-img-input').value.trim() }));
-                     // --- 修正: API端点 ---
-                    const response = await fetch('/api/links/save', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify(items) });
+                    const response = await fetch('/api/links/save', { method: 'POST', headers: authHeaders, body: JSON.stringify(items) });
                     if (response.ok) { alert('友情链接已保存！'); loadLinksItems(); } else { alert('保存失败！'); }
                 });
                 list.addEventListener('click', (e) => { if (e.target.classList.contains('delete-btn')) e.target.closest('.editor-item').remove(); });
@@ -523,15 +510,12 @@
                 cancelButton.addEventListener('click', () => modal.style.display = 'none');
                 list.addEventListener('click', async (e) => {
                     const target = e.target.closest('a'); if (!target) return; e.preventDefault(); const id = target.getAttribute('data-id');
-                    if (target.classList.contains('delete-btn')) { if (!confirm('确定要删除这条评论吗？')) return; 
-                    // --- 修正: API端点 ---
-                    await fetch('/api/comments/delete', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify({ id }) }); loadComments(); }
+                    if (target.classList.contains('delete-btn')) { if (!confirm('确定要删除这条评论吗？')) return; await fetch('/api/comments/delete', { method: 'POST', headers: authHeaders, body: JSON.stringify({ id }) }); loadComments(); }
                     if (target.classList.contains('edit-btn')) { const comment = allCommentsData.find(c => c.id === id); if (comment) { document.getElementById('edit-comment-id').value = comment.id; document.getElementById('edit-comment-content').value = comment.content; modal.style.display = 'flex'; } }
                 });
                 saveButton.addEventListener('click', async () => {
                     const id = document.getElementById('edit-comment-id').value, content = document.getElementById('edit-comment-content').value;
-                    // --- 修正: API端点 ---
-                    await fetch('/api/comments/update', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': authToken }, body: JSON.stringify({ id, content }) });
+                    await fetch('/api/comments/update', { method: 'POST', headers: authHeaders, body: JSON.stringify({ id, content }) });
                     modal.style.display = 'none'; loadComments();
                 });
                 loadComments();
@@ -540,8 +524,7 @@
             async function loadComments() {
                 const tbody = document.getElementById('comment-list-body'); tbody.innerHTML = '';
                 try {
-                    // --- 修正: API端点 ---
-                    const response = await fetch('/api/comments/get', { headers: { 'Authorization': authToken }}); 
+                    const response = await fetch('/api/comments/get', { headers: authHeaders }); 
                     allCommentsData = await response.json() || [];
                     if (allCommentsData.length > 0) {
                         const articleTitles = {};
