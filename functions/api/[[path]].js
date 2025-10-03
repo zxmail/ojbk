@@ -20,10 +20,10 @@ export async function onRequest(context) {
     try {
         // --- 路由：获取所有文章数据 ---
         if (apiRoute === 'get-data' && request.method === 'GET') {
-            const list = await env.DB.list({ prefix: 'post:' });
+            const list = await env.OJBK_STORE.list({ prefix: 'post:' });
             const posts = await Promise.all(
                 list.keys.map(async (key) => {
-                    const value = await env.DB.get(key.name);
+                    const value = await env.OJBK_STORE.get(key.name);
                     return value ? { key: key.name.split(':')[1], value: JSON.parse(value) } : null;
                 })
             );
@@ -34,7 +34,7 @@ export async function onRequest(context) {
         if (apiRoute === 'get-article' && pathSegments.length > 1 && request.method === 'GET') {
             const articleId = pathSegments[1];
             const key = `post:${articleId}`;
-            const value = await env.DB.get(key);
+            const value = await env.OJBK_STORE.get(key);
             if (value === null) {
                 return new Response(JSON.stringify({ error: 'Article not found' }), { status: 404, headers });
             }
@@ -43,25 +43,25 @@ export async function onRequest(context) {
 
         // --- 路由：获取导航菜单 ---
         if (apiRoute === 'nav' && pathSegments[1] === 'get' && request.method === 'GET') {
-            const value = await env.DB.get('config:nav');
+            const value = await env.OJBK_STORE.get('config:nav');
             return new Response(value || '[]', { headers });
         }
         
         // --- 路由：获取网站设置 ---
         if (apiRoute === 'website-settings' && pathSegments[1] === 'get' && request.method === 'GET') {
-            const value = await env.DB.get('config:website-settings');
+            const value = await env.OJBK_STORE.get('config:website-settings');
             return new Response(value || '{}', { headers });
         }
 
         // --- 路由：获取轮播图 ---
         if (apiRoute === 'carousel' && pathSegments[1] === 'get' && request.method === 'GET') {
-            const value = await env.DB.get('config:carousel');
+            const value = await env.OJBK_STORE.get('config:carousel');
             return new Response(value || '[]', { headers });
         }
 
         // --- 路由：获取友情链接 ---
         if (apiRoute === 'links' && pathSegments[1] === 'get' && request.method === 'GET') {
-            const value = await env.DB.get('config:links');
+            const value = await env.OJBK_STORE.get('config:links');
             return new Response(value || '[]', { headers });
         }
 
@@ -87,7 +87,7 @@ export async function onRequest(context) {
                 timestamp: Date.now()
             });
 
-            await env.DB.put(key, value);
+            await env.OJBK_STORE.put(key, value);
 
             return new Response(JSON.stringify({ success: true }), {
                 headers: { 'Content-Type': 'application/json' }
